@@ -2,8 +2,19 @@
 #+Author: Ireina
 #+Date:   <2021-01-02 Sat>
 
-#+BEGIN_QUOTE
 A programming language made in Abyss.
-
-The Abyss come from void, from void you can get everything you want.
+#+BEGIN_QUOTE
+The Abyss comes from void, from void you can get everything you want.
 #+END_QUOTE
+
+** Layers
+- Core lambda calculus
+- Syntax of S-Expression
+- Recursions
+- Simple Type system
+- Callcc and coroutine
+- Typeclasses
+- Monads
+- User-defined parser
+- Lazy calculation
+- Dependent typed system
