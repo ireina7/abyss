@@ -15,6 +15,13 @@ The Abyss comes from void, from void you can get everything you want.
 - Callcc and coroutine
 - Typeclasses
 - Monads
+- Arrows
 - User-defined parser
 - Lazy calculation
+- Implicit conversion system
 - Dependent typed system
+- Optional GC
+- Standard library
+- Interface of C++
+- Object Oriented Programming
+- Erlang processes and actors

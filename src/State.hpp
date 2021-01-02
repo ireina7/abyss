@@ -244,6 +244,15 @@ namespace abyss {
         }
 
         optional<CallInfo*> call(StkId func, I32 n_results);//I dont know why C++ 17 does not support optional<T&>...
+        LClosure &setMainClosure() {
+            auto lam = Lambda();
+            lam.name = "main";
+            lam.code = {};
+            auto &cl = this->newFixedObject<LClosure>(lam);
+            Value cv = Value(&cl);
+            this->stack[0] = cv;
+            return cl;
+        }
         ~State() {
         }
 

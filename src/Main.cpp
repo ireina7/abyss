@@ -77,8 +77,6 @@ int testVM() {
   (fact 5)\
 )";
 
-
-
         auto exp_and_idx = abyss::parseSExpr(src, 0, 0);
         auto exp = exp_and_idx.first;
         Show::println(exp);
@@ -98,15 +96,8 @@ int testVM() {
         S.base_ci.func = 0;//S.stack.begin();
         S.base_ci.top = 2;//S.stack.begin() + 10;
 
-        auto main_lam = abyss::Lambda();
-        main_lam.name = "main";
-        main_lam.code = {};
-        auto main_cl = S.newFixedObject<abyss::LClosure>(main_lam);
 
-        main_cl.lam = main_lam;
-        Show::println<const abyss::LClosure&>(main_cl);
-        abyss::Value cv = abyss::Value(&main_cl);
-        S.stack[0] = cv;
+        S.setMainClosure();
 
         auto cl = S.newFixedObject<abyss::LClosure>(lam);
         abyss::Value clv = &cl;
@@ -123,9 +114,7 @@ int testVM() {
         S.printCurrentStackFrame();
         S.base_ci.printStackFrame();
 
-        for(auto &p : S.l_G->allgc) {
-            Show::println(*p);
-        }
+
         abyss::vm::execute(S, &ci);
         //S.printCurrentStackFrame();
         //S.base_ci.func = 0;//S.stack.begin();

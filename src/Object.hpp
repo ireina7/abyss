@@ -9,6 +9,7 @@
 #include "Utils.hpp"
 
 
+
 namespace abyss {
 
     namespace object {
@@ -264,17 +265,6 @@ namespace abyss {
 
     const Value Nil = Value(object::Tag(object::TNIL));
     const Value None = Value();
-
-
-    namespace closure {
-
-        shared_ptr<LClosure>
-        inline mainClosure() {
-            auto main_cl = make_shared<LClosure>();
-
-            return main_cl;
-        }
-    }
 
 }
 
