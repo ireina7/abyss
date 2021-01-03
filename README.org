@@ -10,6 +10,7 @@ The Abyss comes from void, from void you can get everything you want.
 ** Layers
 - Core lambda calculus
 - Syntax of S-Expression
+- Naive REPL
 - Recursions
 - Simple Type system
 - Callcc and coroutine
