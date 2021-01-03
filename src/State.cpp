@@ -22,11 +22,11 @@ namespace abyss {
             return nothing;
         }
         else if(tag == TFUNCTION_LCLOSURE) {
-            const Lambda &lam =
-                Cast::to<const LClosure&>(func->val).lam;
+            Lambda &lam =
+                Cast::to<LClosure&>(func->val).lam;
             CallInfo ci;
             ci.nresults = n_results;
-            //ci.l.lam = lam;
+            ci.l.lam = &lam;
             ci.l.savedpc = lam.code.cbegin();
             ci.l.endpc = lam.code.end();
             ci.top = (func - this->stack.begin()) + 1 + 10;//lam->max_stacksize;

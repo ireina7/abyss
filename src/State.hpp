@@ -157,6 +157,7 @@ namespace abyss {
         State()
             : status(1),
               allowhook(1),
+              top(0),
               errfunc(0),
               nCcalls(0),
               oldpc(0),
@@ -164,31 +165,24 @@ namespace abyss {
         {
             initStack();
         }
+
         State(GlobalState *g)
             : status(1),
               allowhook(1),
+              top(0),
+              //base_ci(ci_base),
               errfunc(0),
               nCcalls(0),
               oldpc(0),
               basehookcount(0)
         {
             initStack();
-            cis = {};
-            ci = cis.begin();
-            l_G = g;
-        }
-        /* Each State may have a base callinfo when created */
-        State(GlobalState *g, const CallInfo &ci_base)
-            : status(1),
-              allowhook(1),
-              base_ci(ci_base),
-              errfunc(0),
-              nCcalls(0),
-              oldpc(0),
-              basehookcount(0)
-        {
-            initStack();
-            cis = {ci_base};
+            CallInfo base_ci;
+            base_ci.l.base = this->stack.begin();
+            base_ci.func = 0;//S.stack.begin();
+            base_ci.top = 2;//S.stack.begin() + 10;
+            cis = {base_ci};
+            this->base_ci = base_ci;
             ci = cis.begin();
             l_G = g;
         }
@@ -242,6 +236,10 @@ namespace abyss {
             G()->fixedgc.push_back(obj);
             return *obj;
         }
+        State &push(const Value &v) {
+            this->stack[this->top++] = v;
+            return *this;
+        }
 
         optional<CallInfo*> call(StkId func, I32 n_results);//I dont know why C++ 17 does not support optional<T&>...
         LClosure &setMainClosure() {
@@ -251,7 +249,14 @@ namespace abyss {
             auto &cl = this->newFixedObject<LClosure>(lam);
             Value cv = Value(&cl);
             this->stack[0] = cv;
+            //this->top++;
             return cl;
+        }
+        StkId setClosure(LClosure &cl) {
+
+            Value cv = Value(&cl);
+            this->stack[this->top++] = cv;
+            return this->stack.begin() + this->top - 1;
         }
         ~State() {
         }
@@ -261,15 +266,17 @@ namespace abyss {
             this->stack = std::vector<StackValue>(100, abyss::None);
             this->top = 0;//this->stack.begin();
             //this->stack_last = this->top + STACK_SIZE;
+            /*
             CallInfo &ci = this->base_ci;
             ci.next = ci.previous = nullptr;
             ci.func = this->top;
             ci.c.k = nullptr;
             ci.nresults = 0;
-            this->top += 1;
+            //this->top += 1;
             ci.top = this->top + 20;
             ci.n_top = 20;
             ci.ready = true;
+            */
         }
         GlobalState *G() {
             return this->l_G;

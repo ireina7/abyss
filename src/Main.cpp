@@ -74,7 +74,7 @@ int testVM() {
   (define (not b) (if b False True))\
   (define (fact x) (if (< 1 x) (* x (fact (- x 1))) 1))       \
 \
-  (fact 5)\
+  (fact 6)\
 )";
 
         auto exp_and_idx = abyss::parseSExpr(src, 0, 0);
@@ -82,44 +82,21 @@ int testVM() {
         Show::println(exp);
 
         abyss::FuncState fs = abyss::generateFuncState(exp);
+        abyss::State S = abyss::State(&Gs);
 
-        lam = fs.lam;
-        Show::println(lam.p.size());
-        abyss::CallInfo ci, main_ci;
-        ci.l.lam = &lam;
-        ci.l.savedpc = lam.code.cbegin();
-        ci.l.endpc = lam.code.cend();
+        auto cl = S.newGCObject<abyss::LClosure>(fs.lam);
+        abyss::StkId sid = S.setClosure(cl);
 
-        abyss::State S = abyss::State(&Gs, main_ci);
-        S.base_ci.l.base = S.stack.begin();
+        S.push(1)
+         .push(2)
+         .push(3)
+         .push(4);
 
-        S.base_ci.func = 0;//S.stack.begin();
-        S.base_ci.top = 2;//S.stack.begin() + 10;
-
-
-        S.setMainClosure();
-
-        auto cl = S.newFixedObject<abyss::LClosure>(lam);
-        abyss::Value clv = &cl;
-        S.stack[2] = clv;
-        ci.func = 2;//S.stack.begin() + 2;
-        S.stack[3].val = 1;
-        S.stack[4].val = 2;
-        S.stack[5].val = 3;
-        S.stack[6].val = 4;
-        ci.top = ci.func + 20;
-        ci.l.base = S.stack.begin() + ci.func + 1;
-        ci.nresults = 1;
-        S.appendCallInfo(ci);
-        S.printCurrentStackFrame();
-        S.base_ci.printStackFrame();
-
-
+        abyss::CallInfo &ci = *S.call(sid, 1).value();
         abyss::vm::execute(S, &ci);
-        //S.printCurrentStackFrame();
-        //S.base_ci.func = 0;//S.stack.begin();
-        //S.base_ci.l.base = S.stack.begin();
-        S.base_ci.printStackFrame();
+
+        S.printCurrentStackFrame();
+        //S.base_ci.printStackFrame();
         abyss::printAbyssInfo();
     }
     catch(const std::exception& e) {
