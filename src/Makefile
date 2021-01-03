@@ -49,5 +49,5 @@ re: clean all
 	./a.out
 
 clean:
-	rm *.o
-	rm a.out
+	rm -f *.o
+	rm -f *.out
