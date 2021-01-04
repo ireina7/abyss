@@ -47,6 +47,7 @@ namespace abyss {
                            Cast::to<const Integer&>(v1),
                            Cast::to<const Integer&>(v2));
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else if(v1.getType() == object::TNUMBER &&
@@ -56,6 +57,7 @@ namespace abyss {
                            Cast::to<const Real&>(v1),
                            Cast::to<const Real&>(v2));
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else {
@@ -77,6 +79,7 @@ namespace abyss {
                     Cast::to<const Integer&>(v1) ==
                     Cast::to<const Integer&>(v2);
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else if(v1.getType() == object::TNUMBER &&
@@ -85,6 +88,7 @@ namespace abyss {
                     Cast::to<const Real&>(v1) ==
                     Cast::to<const Real&>(v2);
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else {
@@ -106,6 +110,7 @@ namespace abyss {
                     Cast::to<const Integer&>(v1) <
                     Cast::to<const Integer&>(v2);
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else if(v1.getType() == object::TNUMBER &&
@@ -114,6 +119,7 @@ namespace abyss {
                     Cast::to<const Real&>(v1) <
                     Cast::to<const Real&>(v2);
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else {
@@ -135,6 +141,7 @@ namespace abyss {
                     Cast::to<const Integer&>(v1) <=
                     Cast::to<const Integer&>(v2);
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else if(v1.getType() == object::TNUMBER &&
@@ -143,6 +150,7 @@ namespace abyss {
                     Cast::to<const Real&>(v1) <=
                     Cast::to<const Real&>(v2);
                 ra->val = res;
+                S.top = a.getArg_A();
                 //++pc;
             }
             else {
@@ -189,6 +197,7 @@ namespace abyss {
                 case OP_LOADK: {
                     /* Unimplemented! We have to check liveness before assigning */
                     ra.val = K(instr.getArg_Bx());
+                    S.top = a;
                     //S.top = S.top < (ra - base) ? ra-base : S.top;
                     break;
                 }
@@ -401,7 +410,8 @@ namespace abyss {
                             }
                         }
                     }
-                    abyss::collect(S);
+                    //abyss::collect(S);
+                    ci->l.savedpc = pc;
                     return; //ad-hoc, should be removed later!
                     break;
                 }
@@ -426,6 +436,7 @@ namespace abyss {
                         lcl.upvals.push_back(S.openupval.back());
                     }
                     ra = Value(&lcl);
+                    S.top = a;
                     //S.top = S.top < (ra - base) ? ra-base : S.top;
                     /* Unimplemented! */
                     break;
@@ -435,6 +446,7 @@ namespace abyss {
                     break;
                 }
                 }//end switch OpCode
+                ci->l.savedpc = pc;
             }//end for
 
         }//end execute

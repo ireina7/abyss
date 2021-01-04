@@ -26,3 +26,4 @@ The Abyss comes from void, from void you can get everything you want.
 - Interface of C++
 - Object Oriented Programming
 - Erlang processes and actors
+- Automatic differentiation

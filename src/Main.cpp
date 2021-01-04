@@ -10,6 +10,7 @@
 #include "Parser.hpp"
 #include "Code.hpp"
 #include "Debug.hpp"
+#include "Repl.hpp"
 
 
 
@@ -47,7 +48,7 @@ int testVM() {
   (define (h x y) (+ (f x) (g y)))\
   (g (h c d))\
 )";
-*/
+        */
         /*
             abyss::string src = "\
 (define (base a b c d)\
@@ -64,11 +65,11 @@ int testVM() {
 \
   (car (cons (square 3) 4))\
 )";
-*/
+        */
 
              abyss::string src = "\
 (define (base a b c d)\
-  (define (square x) (* x x)n)\
+  (define (square x) (* x x))\
   (define (or a b) (if a True b))\
   (define (and a b) (if a b False))\
   (define (not b) (if b False True))\
@@ -93,11 +94,13 @@ int testVM() {
          .push(4);
 
         abyss::CallInfo &ci = *S.call(sid, 1).value();
+        S.printCurrentStackFrame();
         abyss::vm::execute(S, &ci);
 
         S.printCurrentStackFrame();
         //S.base_ci.printStackFrame();
         abyss::printAbyssInfo();
+        abyss::repl();
     }
     catch(const std::exception& e) {
         print_exception(e, 1);

@@ -24,10 +24,8 @@ namespace abyss {
                     ++i;
                 }
                 exp = SExpr(isReal ? SReal : SInt);
-                Show::println("???? " + Show::show(var));
                 if(isReal) exp.var = std::stod(var);
                 else exp.var = std::stoi(var);
-                Show::println("???? " + Show::show(exp));
             }
             else if(true) {
                 while(i < src.size() && !isblank(src[i]) && src[i] != ')') {

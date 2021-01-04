@@ -121,6 +121,8 @@ namespace abyss {
 
     FuncState
     generateFuncState(const SExpr &tree, FuncState *outer_fs = nullptr);
+
+    SExpr &markK(SExpr &exp, FuncState &fs);
 }//end namespace abyss
 
 #endif

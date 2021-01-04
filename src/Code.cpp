@@ -49,7 +49,9 @@ namespace abyss {
         }
 
         Reg rb = generateFuncCodeFromSExpr(*exp.list[1], fs).val;
+        if(rb >= fs.top) fs.top++;
         Reg rc = generateFuncCodeFromSExpr(*exp.list[2], fs).val;
+        if(rb >= fs.top) fs.top++;
         Reg ra;
         /**
            This is used to save registers... i.e. pick the slot with least number
@@ -66,7 +68,7 @@ namespace abyss {
         else {
             ra = fs.top++;
         }
-        fs.top = ra + 1;
+        fs.top = ra;
         gen(fs, ra, rb, rc);
         return EnvIndex(RegIndex, ra);
     }
@@ -113,6 +115,13 @@ namespace abyss {
     EnvIndex
     generateFuncCodeFromSExpr(const SExpr &exp, FuncState &fs) {
         std::vector<Atom> &codes = fs.lam.code;
+        /*
+        Show::println("---------- Codes ----------");
+        for(const auto &code : fs.lam.code) {
+            Show::println(code);
+        }
+        Show::println("---------- end Codes ----------");
+        */
         switch(exp.getType()) {
         case SNone: {
             return errorIdx;
@@ -122,8 +131,8 @@ namespace abyss {
                 error("error> ...");
             }
             codes.push_back
-                (instructions::LOADK(fs.top++, Cast::to<Integer>(exp.var)));
-            return EnvIndex(RegIndex, fs.top - 1);
+                (instructions::LOADK(fs.top, Cast::to<Integer>(exp.var)));
+            return EnvIndex(RegIndex, fs.top);
             break;
         }
         case SBool: {
@@ -134,8 +143,8 @@ namespace abyss {
                 error("error> ...");
             }
             codes.push_back
-                (instructions::LOADK(fs.top++, Cast::to<Real>(exp.var)));
-            return EnvIndex(RegIndex, fs.top - 1);
+                (instructions::LOADK(fs.top, Cast::to<Real>(exp.var)));
+            return EnvIndex(RegIndex, fs.top);
             break;
         }
         case SVar: {
@@ -168,11 +177,15 @@ namespace abyss {
                         found = true;
                     }
                 }
+                if(!found) {
+                    error("error> Coder: Upvalue " +
+                          Show::show(key) + " not found");
+                }
                 fs.lam.upvalues.push_back(uvdesc);
                 codes.push_back
                     (instructions::GETTABUP
-                     (fs.top++, 0, fs.lam.upvalues.size() - 1));
-                return EnvIndex(RegIndex, fs.top - 1);
+                     (fs.top, 0, fs.lam.upvalues.size() - 1));
+                return EnvIndex(RegIndex, fs.top);
                 //error("error> Code.hpp: Lexical scoping is not yet implemented!");
             }
             break;
@@ -236,7 +249,8 @@ namespace abyss {
                     fs.sym_table.insert
                     ({ Cast::to<const string&>(name->var),
                        EnvIndex(RegIndex, fs.top - 1) });
-                    return idx;
+                    fs.nv++;
+                    return EnvIndex(RegIndex, fs.top - 1);
                 }
                 if(op == "define" && exp.list[1]->getType() == SVar) {
                     /**
@@ -257,7 +271,8 @@ namespace abyss {
                     fs.sym_table.insert
                     ({ Cast::to<const string&>(name->var),
                        EnvIndex(RegIndex, fs.top - 1) });
-                    return idx;
+                    fs.nv++;
+                    return EnvIndex(RegIndex, fs.top - 1);
                 }
                 if(op == "let") {
                     /**
@@ -294,9 +309,9 @@ namespace abyss {
                     //The true part expression
                     EnvIndex idx_val1 = generateFuncCodeFromSExpr(*val1, fs);
                     if(idx_val1.val < ra) {
-                        codes.push_back(instructions::MOVE(fs.top++, idx_val1.val));
+                        codes.push_back(instructions::MOVE(fs.top, idx_val1.val));
                     }
-                    fs.top--;
+                    //fs.top--;
                     codes.push_back(instructions::JUMP(0));
                     I32 idx_jmp1 = codes.size() - 1;
 
@@ -304,11 +319,11 @@ namespace abyss {
                     codes[idx_jmp0] = instructions::JUMP(codes.size() - idx_jmp0);
                     EnvIndex idx_val0 = generateFuncCodeFromSExpr(*val0, fs);
                     if(idx_val0.val < ra) {
-                        codes.push_back(instructions::MOVE(fs.top++, idx_val0.val));
+                        codes.push_back(instructions::MOVE(fs.top, idx_val0.val));
                     }
                     codes[idx_jmp1] = instructions::JUMP(codes.size() - idx_jmp1);
-                    codes.push_back(instructions::MOVE(ra, fs.top - 1));
-                    fs.top = ra + 1;
+                    codes.push_back(instructions::MOVE(ra, fs.top));
+                    fs.top = ra;
                     return EnvIndex(RegIndex, ra);
                 }
             }
@@ -321,12 +336,13 @@ namespace abyss {
             for(auto it = exp.list.begin(); it != exp.list.end(); ++it) {
                 Reg rp = generateFuncCodeFromSExpr(**it, fs).val;
                 if(rp < ra) {//Can be equal?
-                    codes.push_back(instructions::MOVE(fs.top++, rp));
+                    codes.push_back(instructions::MOVE(fs.top, rp));
                 }
+                fs.top++;
             }
             Reg rb = fs.top - ra - 1;
             codes.push_back(instructions::CALL(ra, rb, 0));
-            fs.top = ra + 1;
+            fs.top = ra;
             return EnvIndex(RegIndex, ra);
             break;
         }
@@ -344,6 +360,48 @@ namespace abyss {
         return codes;
     }
 
+    SExpr &markK(SExpr &exp, FuncState &fs) {
+        traverseSExpr<void>
+            (exp, fs,
+             [](SExpr &exp, FuncState &fs) {
+                 switch(exp.getType()) {
+                 case SNone: {
+                     return;
+                 }
+                 case SInt: {
+                     fs.lam.k.push_back(std::get<Integer>(exp.var));
+                     fs.nk += 1;
+                     exp.isK = true;
+                     exp.var = fs.nk;
+                     break;
+                 }
+                 case SBool: {
+                     fs.lam.k.push_back(std::get<Bool>(exp.var));
+                     fs.nk += 1;
+                     exp = SExpr(SInt); //we have to convert to int to indicate constant index
+                     exp.isK = true;
+                     exp.var = fs.nk;
+                     break;
+                 }
+                 case SReal: {
+                     fs.lam.k.push_back(std::get<Real>(exp.var));
+                     fs.nk += 1;
+                     exp = SExpr(SInt); //we have to convert to int to indicate constant index
+                     exp.isK = true;
+                     exp.var = fs.nk;
+                     break;
+                 }
+                 case SVar: {
+                     break;
+                 }
+                 default: {
+                     error("error> Unknow SExpr type: " +
+                           Show::show(exp.getType()));
+                 }
+                 }
+             });
+        return exp;
+    }
 
     FuncState
     generateFuncState(const SExpr &tree,
@@ -419,45 +477,7 @@ namespace abyss {
             //Show::println(**it);
             /* Unimplemented! handle set! assignment */
             /* Expressions */
-            traverseSExpr<void>
-                (**it, fs,
-                 [](SExpr &exp, FuncState &fs) {
-                     switch(exp.getType()) {
-                     case SNone: {
-                         return;
-                     }
-                     case SInt: {
-                         fs.lam.k.push_back(std::get<Integer>(exp.var));
-                         fs.nk += 1;
-                         exp.isK = true;
-                         exp.var = fs.nk;
-                         break;
-                     }
-                     case SBool: {
-                         fs.lam.k.push_back(std::get<Bool>(exp.var));
-                         fs.nk += 1;
-                         exp = SExpr(SInt); //we have to convert to int to indicate constant index
-                         exp.isK = true;
-                         exp.var = fs.nk;
-                         break;
-                     }
-                     case SReal: {
-                         fs.lam.k.push_back(std::get<Real>(exp.var));
-                         fs.nk += 1;
-                         exp = SExpr(SInt); //we have to convert to int to indicate constant index
-                         exp.isK = true;
-                         exp.var = fs.nk;
-                         break;
-                     }
-                     case SVar: {
-                         break;
-                     }
-                     default: {
-                         error("error> Unknow SExpr type: " +
-                               Show::show(exp.getType()));
-                     }
-                     }
-                 });
+            markK(**it, fs);
 
             Reg rx = generateFuncCodeFromSExpr(**it, fs).val;
             if(it + 1 == list.end()) {
@@ -472,6 +492,7 @@ namespace abyss {
         }
         lam.sym_table = local_table;
         //lam.size_k = fs.nk;
+        /*
         Show::println("Found " + Show::show(fs.nk) + " constants");
         Show::println("Found " + Show::show(fs.np) + " parameters");
         Show::println("---------- Symbol table ----------");
@@ -487,7 +508,7 @@ namespace abyss {
             Show::println(x);
         }
         Show::println("---------- end Constant table ----------");
-        /* Unimplemented! */
+        // Unimplemented!
         //generateFuncCodeFromBody()
         Show::println(tree);
         Show::println("");
@@ -506,6 +527,7 @@ Show::println("");
 Show::println("");
 Show::println("");
 Show::println("");
+        */
         return fs;
     }
 
