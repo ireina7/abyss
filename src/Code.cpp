@@ -6,26 +6,15 @@ namespace abyss {
     template<class B>
     SExpr &traverseSExpr(SExpr &exp, FuncState &fs,
                          const std::function<B(SExpr &A, FuncState &fss)> &f) {
-        switch(exp.getType()) {
-        case SNone:
-        case SInt:
-        case SBool:
-        case SReal:
-        case SVar: {
-            f(exp, fs);
-            break;
-        }
-        case SList: {
-            if(exp.list[0]->getType() == SVar &&
-               Cast::to<const abyss::string&>(exp.list[0]->var) == "define") {
-                break;
-            }
-            for(const auto &x : exp.list) {
-                traverseSExpr(*x, fs, f);
-            }
-            break;
-        }
-        }
+        match(exp.val,
+              [&](SExprList &list) {
+                  for(const auto &x : list) {
+                      traverseSExpr(*x, fs, f);
+                  }
+              },
+              [&](auto &others) {
+                  f(exp, fs);
+              });
         return exp;
     }
 
@@ -44,13 +33,15 @@ namespace abyss {
     EnvIndex
     genABCFunc(const SExpr &exp, FuncState &fs,
                function<void(FuncState&, Reg, Reg, Reg)> gen) {
-        if(exp.list.size() != 3) {
+
+        const SExprList &list = Cast::to<const SExprList&>(exp);
+        if(list.size() != 3) {
             error("error> Arithmetic error");
         }
 
-        Reg rb = generateFuncCodeFromSExpr(*exp.list[1], fs).val;
+        Reg rb = generateFuncCodeFromSExpr(*list[1], fs).val;
         if(rb >= fs.top) fs.top++;
-        Reg rc = generateFuncCodeFromSExpr(*exp.list[2], fs).val;
+        Reg rc = generateFuncCodeFromSExpr(*list[2], fs).val;
         if(rb >= fs.top) fs.top++;
         Reg ra;
         /**
@@ -122,6 +113,7 @@ namespace abyss {
         }
         Show::println("---------- end Codes ----------");
         */
+        EnvIndex ans = errorIdx;
         switch(exp.getType()) {
         case SNone: {
             return errorIdx;
@@ -131,7 +123,7 @@ namespace abyss {
                 error("error> ...");
             }
             codes.push_back
-                (instructions::LOADK(fs.top, Cast::to<Integer>(exp.var)));
+                (instructions::LOADK(fs.top, Cast::to<const Integer&>(exp)));
             return EnvIndex(RegIndex, fs.top);
             break;
         }
@@ -143,30 +135,30 @@ namespace abyss {
                 error("error> ...");
             }
             codes.push_back
-                (instructions::LOADK(fs.top, Cast::to<Real>(exp.var)));
+                (instructions::LOADK(fs.top, Cast::to<const Real&>(exp)));
             return EnvIndex(RegIndex, fs.top);
             break;
         }
         case SVar: {
-            auto key = Cast::to<const string&>(exp.var);
+            auto key = Cast::to<const string&>(exp);
             if(fs.sym_table.count(key) > 0) {
                 /**
-                   C++ sucks again!
-                   We have to check count here!
-                   If we do not carefully check whether key has existed,
-                   the subscription operator will automatically create one for us
-                   which is really a bug!
-
-                   @author: Ireina
-                 */
+                   C++ sucks again! //
+                   We have to check count here! //
+                   If we do not carefully check whether key has existed, //
+                   the subscription operator will automatically create one for us //
+                   which is really a bug! //
+                   //
+                   @author: Ireina //
+                */
                 return fs.sym_table[key];
             }
             else {
                 /**
-                   This may come from outer scope, we have to make an upvalue.
-
-                   @author: Ireina
-                 */
+                   This may come from outer scope, we have to make an upvalue. //
+                   //
+                   @author: Ireina //
+                */
                 Upvaldesc uvdesc;
                 bool found = false;
                 for(FuncState *cur = fs.outer; cur != nullptr; cur = cur->outer) {
@@ -191,14 +183,15 @@ namespace abyss {
             break;
         }
         case SList: {
-            if(exp.list.empty()) {
+            auto list = Cast::to<const SExprList&>(exp);
+            if(list.empty()) {
                 return errorIdx;
             }
             /**
-               If is an atom call
-             */
-            if(exp.list[0]->getType() == SVar) {
-                auto op = Cast::to<const string&>(exp.list[0]->var);
+               If is an atom call //
+            */
+            if(list[0]->getType() == SVar) {
+                auto op = Cast::to<string&>(*list[0]);
 
                 if(op == "+") {
                     return genArith("+", exp, fs);
@@ -222,23 +215,19 @@ namespace abyss {
                     return genLE(exp, fs);
                 }
 
-                if(op == "define" && exp.list[1]->getType() == SList) {
+                if(op == "define" && list[1]->getType() == SList) {
                     /**
-                       (define (f args...) <body>)
-                     */
+                       (define (f args...) <body>) //
+                    */
                     FuncState newFs = generateFuncState(exp, &fs);
                     fs.lam.p.push_back(std::make_shared<abyss::Lambda>(newFs.lam));
                     auto idx = EnvIndex(LamIndex, fs.lam.p.size() - 1);
-                    auto list = exp.list;
+
                     /* Ok now this may be valid function declaration */
-                    auto name_and_params = list[1];
+                    auto name_and_params = Cast::to<SExprList&>(*list[1]);
                     std::shared_ptr<SExpr> name;
-                    if(name_and_params->getType() == SList &&
-                       name_and_params->list[0]->getType() == SVar) {
-                        name = name_and_params->list[0];
-                    }
-                    else if(name_and_params->getType() == SVar) {
-                        name = name_and_params;
+                    if(name_and_params[0]->getType() == SVar) {
+                        name = name_and_params[0];
                     }
                     else {
                         error("error> GenCodeFromSExpr: Wrong format of definition!");
@@ -247,19 +236,19 @@ namespace abyss {
                     codes.push_back(instructions::CLOSURE(fs.top++, idx.val));
 
                     fs.sym_table.insert
-                    ({ Cast::to<const string&>(name->var),
-                       EnvIndex(RegIndex, fs.top - 1) });
+                        ({ Cast::to<string&>(*name),
+                           EnvIndex(RegIndex, fs.top - 1) });
                     fs.nv++;
                     return EnvIndex(RegIndex, fs.top - 1);
                 }
-                if(op == "define" && exp.list[1]->getType() == SVar) {
+                if(op == "define" && list[1]->getType() == SVar) {
                     /**
-                       (define (f args...) <body>)
-                     */
+                       (define (f args...) <body>) //
+                    */
                     FuncState newFs = generateFuncState(exp, &fs);
                     fs.lam.p.push_back(std::make_shared<abyss::Lambda>(newFs.lam));
                     auto idx = EnvIndex(LamIndex, fs.lam.p.size() - 1);
-                    auto list = exp.list;
+
                     /* Ok now this may be valid function declaration */
                     auto name_and_params = list[1];
                     std::shared_ptr<SExpr> name;
@@ -269,34 +258,34 @@ namespace abyss {
                     codes.push_back(instructions::CALL(fs.top++, 0, 0)); //call it in place!
 
                     fs.sym_table.insert
-                    ({ Cast::to<const string&>(name->var),
-                       EnvIndex(RegIndex, fs.top - 1) });
+                        ({ Cast::to<string&>(*name),
+                           EnvIndex(RegIndex, fs.top - 1) });
                     fs.nv++;
                     return EnvIndex(RegIndex, fs.top - 1);
                 }
                 if(op == "let") {
                     /**
-                       (let (<binding>...) expr)
-                     */
+                       (let (<binding>...) expr) //
+                    */
                     /* Unimplemented! */
                     return errorIdx;
                 }
                 if(op == "set!") {
                     /**
-                       (set! id exp)
-                     */
+                       (set! id exp) //
+                    */
                     /* Unimplemented! */
                     return errorIdx;
                 }
                 if(op == "if") {
                     /**
-                       (if <condition> <true-expression> <false-expression>)
-                     */
-                    ensure(exp.list.size() == 4,
+                       (if <condition> <true-expression> <false-expression>) //
+                    */
+                    ensure(list.size() == 4,
                            "error> Code: wrong format of if expression");
-                    auto cond = exp.list[1];
-                    auto val0 = exp.list[2];
-                    auto val1 = exp.list[3];
+                    auto cond = list[1];
+                    auto val0 = list[2];
+                    auto val1 = list[3];
                     Reg ra = fs.top;
                     EnvIndex idx_cond = generateFuncCodeFromSExpr(*cond, fs);
                     if(idx_cond.val < ra) {
@@ -329,13 +318,13 @@ namespace abyss {
             }
 
             /**
-               else this is a normal function call
-             */
-            auto f = exp.list[0];
+               else this is a normal function call //
+            */
+            auto f = list[0];
             Reg ra = fs.top;
-            for(auto it = exp.list.begin(); it != exp.list.end(); ++it) {
+            for(auto it = list.begin(); it != list.end(); ++it) {
                 Reg rp = generateFuncCodeFromSExpr(**it, fs).val;
-                if(rp < ra) {//Can be equal?
+                if(rp < ra) { //Can be equal?
                     codes.push_back(instructions::MOVE(fs.top, rp));
                 }
                 fs.top++;
@@ -369,26 +358,26 @@ namespace abyss {
                      return;
                  }
                  case SInt: {
-                     fs.lam.k.push_back(std::get<Integer>(exp.var));
+                     fs.lam.k.push_back(Cast::to<Integer>(exp));
                      fs.nk += 1;
                      exp.isK = true;
-                     exp.var = fs.nk;
+                     exp.val = fs.nk;
                      break;
                  }
                  case SBool: {
-                     fs.lam.k.push_back(std::get<Bool>(exp.var));
+                     fs.lam.k.push_back(Cast::to<Bool>(exp));
                      fs.nk += 1;
                      exp = SExpr(SInt); //we have to convert to int to indicate constant index
                      exp.isK = true;
-                     exp.var = fs.nk;
+                     exp.val = fs.nk;
                      break;
                  }
                  case SReal: {
-                     fs.lam.k.push_back(std::get<Real>(exp.var));
+                     fs.lam.k.push_back(Cast::to<Real>(exp));
                      fs.nk += 1;
                      exp = SExpr(SInt); //we have to convert to int to indicate constant index
                      exp.isK = true;
-                     exp.var = fs.nk;
+                     exp.val = fs.nk;
                      break;
                  }
                  case SVar: {
@@ -418,10 +407,10 @@ namespace abyss {
         ensure(tree.getType() == SList,
                "error> generateFunccode should receive function declaration!");
         /* else is a list */
-        auto list = tree.list;
+        auto list = Cast::to<const SExprList&>(tree);
         ensure(list[0]->getType() == SVar &&
                //list[0]->var.getType() == object::TSTRING &&
-               Cast::to<const abyss::string&>(list[0]->var) == "define",
+               Cast::to<string&>(*list[0]) == "define",
                "error> generateFunccode should receive function declaration!");
 
         /* Ok now this may be valid function declaration */
@@ -429,41 +418,46 @@ namespace abyss {
         std::shared_ptr<SExpr> name;
         std::vector<std::shared_ptr<SExpr>>::iterator params;
         bool hasParams = true;
-        if(name_and_params->getType() == SList &&
-           name_and_params->list[0]->getType() == SVar) {
+        match(name_and_params->val,
+              [&](SExprList& xs) {
+                  if(xs[0]->getType() == SVar) {
+                      name = xs[0];
+                      params = xs.begin() + 1;
+                      fs.np = xs.size() - 1;
+                  }
+              },
+              [&](string &s) {
+                  name = name_and_params;
+                  hasParams = false;
+                  fs.np = 0;
+              },
+              [&](auto) {
+                  error("error> generateFunccode should receive function declaration!");
+              });
 
-            name = name_and_params->list[0];
-            params = name_and_params->list.begin() + 1;
-        }
-        else if(name_and_params->getType() == SVar) {
-            name = name_and_params;
-            hasParams = false;
-        }
-        else {
-            error("error> generateFunccode should receive function declaration!");
-        }
         /*
         lam.source = std::make_shared<abyss::String>
             (Cast::to<const abyss::string&>(name->var));
         Show::println(*lam.source);
         */
 
-        lam.name = Cast::to<const abyss::string&>(name->var);
-        fs.np = hasParams ? name_and_params->list.size() - 1 : 0;
+        lam.name = Cast::to<string&>(*name);
+        //fs.np = hasParams ? name_and_params->list.size() - 1 : 0;
         lam.n_params = fs.np;
-        fs.nv = hasParams ? name_and_params->list.size() - 1 : 0;
+        fs.nv = fs.np;
         fs.nk = 0;
         fs.nx = fs.np + 1;
         fs.top = fs.nx;
 
         /* Handling parameter symbol table */
         if(hasParams) {
+            auto apply_list = Cast::to<SExprList&>(*name_and_params);
             I32 i = 0;
-            for(auto it = name_and_params->list.begin();
-                it != name_and_params->list.end(); ++it) {
+            for(auto it = apply_list.begin();
+                it != apply_list.end(); ++it) {
                 if((*it)->getType() == SVar) {
                     fs.sym_table.insert
-                        ({Cast::to<const abyss::string&>((*it)->var), EnvIndex(RegIndex, i)});
+                        ({Cast::to<string&>(**it), EnvIndex(RegIndex, i)});
                     ++i;
                 }
             }
@@ -477,7 +471,9 @@ namespace abyss {
             //Show::println(**it);
             /* Unimplemented! handle set! assignment */
             /* Expressions */
-            markK(**it, fs);
+            if(!(*it)->isDefinition()) {
+                markK(**it, fs);
+            }
 
             Reg rx = generateFuncCodeFromSExpr(**it, fs).val;
             if(it + 1 == list.end()) {

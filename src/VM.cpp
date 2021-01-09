@@ -174,8 +174,8 @@ namespace abyss {
 
             int i = 0;
             for(; i < 20 && pc != cl.lam.code.end(); ++pc, ++i) {
-                S.printCurrentStackFrame();
-                Show::println(*pc);
+                //S.printCurrentStackFrame();
+                //Show::println(*pc);
                 instr = *pc;
                 I32 a = instr.getArg_A();
                 StackValue &ra = R(a);

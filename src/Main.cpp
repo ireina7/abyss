@@ -79,7 +79,9 @@ int testVM() {
 )";
 
         auto exp_and_idx = abyss::parseSExpr(src, 0, 0);
+        Show::println("over");
         auto exp = exp_and_idx.first;
+
         Show::println(exp);
 
         abyss::FuncState fs = abyss::generateFuncState(exp);

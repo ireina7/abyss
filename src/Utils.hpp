@@ -102,7 +102,17 @@ namespace abyss {
         return notMatch(A.c_str(), B);
     }
 
-}
+
+    template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+    template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+    template<class Variant, class... Handlers>
+    auto match(Variant &&v, Handlers&&... handlers) {
+        return std::visit(overloaded {
+                   std::forward<Handlers>(handlers)...},
+                   std::forward<Variant>(v));
+    }
+}//end namespace abyss
 
 
 #endif

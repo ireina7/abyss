@@ -35,8 +35,14 @@ namespace abyss {
                 continue;
             }
             //Show::println(exp);
-            markK(exp, fs);
+            if(!exp.isDefinition()) markK(exp, fs);
             auto idx = generateFuncCodeFromSExpr(exp, fs);
+
+            if(exp.getType() == abyss::SVar) {
+                //if()
+                Show::println("-> " + Show::show(S.stack[idx.val]) + "\n");
+                continue;
+            }
             /*
             if(idx.val <= fs.nv) {
                 //Is a local variable
@@ -45,13 +51,13 @@ namespace abyss {
                 }*/
 
             auto cl = S.newFixedObject<LClosure>(fs.lam);
-
+            /*
             Show::println("---------- Codes ----------");
             for(const auto &code : cl.lam.code) {
                 Show::println(code);
             }
             Show::println("---------- end Codes ----------");
-
+            */
             S.stack[0] = Value(&cl);
             //S.printCurrentStackFrame();
             CallInfo &ci = *S.call(S.stack.begin(), 1).value();
@@ -61,7 +67,7 @@ namespace abyss {
                 ci.l
                 }*/
             vm::execute(S, &ci);
-            S.printCurrentStackFrame();
+            //S.printCurrentStackFrame();
             saved_pc = ci.l.savedpc - ci.l.lam->code.begin() + 1;
 
             Show::println("-> " + Show::show(S.stack[S.top]) + "\n");
