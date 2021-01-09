@@ -9,7 +9,7 @@ namespace abyss {
               [&](const SExprList &xs) {
                   if(xs.size() > 0 &&
                      xs[0]->getType() == SVar &&
-                     Cast::to<string&>(*xs[0]) == "define") {
+                     Cast::to<VarDesc&>(*xs[0]).name == "define") {
                       ans = true;
                   }
               },
@@ -41,7 +41,14 @@ namespace abyss {
                 if(isReal) exp = std::stod(var);
                 else exp = std::stoi(var);
             }
-            else if(true) {
+            else if(src[i] == '"') {
+                for(i += 1; i < src.size() && src[i] != '"'; ++i) {
+                    var += src[i];
+                }
+                i += 1;
+                exp = var;
+            }
+            else {
                 while(i < src.size() && !isblank(src[i]) && src[i] != ')') {
                     var += src[i];
                     ++i;
@@ -53,11 +60,8 @@ namespace abyss {
                 }
                 else {
                     //exp = SExpr(SVar);
-                    exp = var;
+                    exp = VarDesc(var);
                 }
-            }
-            else {
-                error("error> How to parse?");
             }
             return { exp, i - 1 };
         }

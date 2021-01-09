@@ -78,8 +78,15 @@ int testVM() {
   (fact 6)\
 )";
 
+            /*
+        abyss::string src = "\
+(define (base a b c d)\
+  (define s \"hello\")\
+  (* 2 3)\
+)";
+            */
+
         auto exp_and_idx = abyss::parseSExpr(src, 0, 0);
-        Show::println("over");
         auto exp = exp_and_idx.first;
 
         Show::println(exp);
@@ -101,7 +108,7 @@ int testVM() {
 
         S.printCurrentStackFrame();
         //S.base_ci.printStackFrame();
-        abyss::printAbyssInfo();
+        //abyss::printAbyssInfo();
         abyss::repl();
     }
     catch(const std::exception& e) {

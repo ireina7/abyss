@@ -131,16 +131,16 @@ namespace abyss {
             break;
         }
         case SReal: {
-            if(!exp.isK) {
-                error("error> ...");
-            }
-            codes.push_back
-                (instructions::LOADK(fs.top, Cast::to<const Real&>(exp)));
-            return EnvIndex(RegIndex, fs.top);
-            break;
-        }
+                     if(!exp.isK) {
+                                   error("error> ...");
+                                   }
+                     codes.push_back
+                     (instructions::LOADK(fs.top, Cast::to<const Real&>(exp)));
+                     return EnvIndex(RegIndex, fs.top);
+                     break;
+                     }
         case SVar: {
-            auto key = Cast::to<const string&>(exp);
+            auto key = Cast::to<const VarDesc&>(exp).name;
             if(fs.sym_table.count(key) > 0) {
                 /**
                    C++ sucks again! //
@@ -191,7 +191,7 @@ namespace abyss {
                If is an atom call //
             */
             if(list[0]->getType() == SVar) {
-                auto op = Cast::to<string&>(*list[0]);
+                auto op = Cast::to<VarDesc&>(*list[0]).name;
 
                 if(op == "+") {
                     return genArith("+", exp, fs);
@@ -236,7 +236,7 @@ namespace abyss {
                     codes.push_back(instructions::CLOSURE(fs.top++, idx.val));
 
                     fs.sym_table.insert
-                        ({ Cast::to<string&>(*name),
+                        ({ Cast::to<VarDesc&>(*name).name,
                            EnvIndex(RegIndex, fs.top - 1) });
                     fs.nv++;
                     return EnvIndex(RegIndex, fs.top - 1);
@@ -258,7 +258,7 @@ namespace abyss {
                     codes.push_back(instructions::CALL(fs.top++, 0, 0)); //call it in place!
 
                     fs.sym_table.insert
-                        ({ Cast::to<string&>(*name),
+                        ({ Cast::to<VarDesc&>(*name).name,
                            EnvIndex(RegIndex, fs.top - 1) });
                     fs.nv++;
                     return EnvIndex(RegIndex, fs.top - 1);
@@ -335,6 +335,9 @@ namespace abyss {
             return EnvIndex(RegIndex, ra);
             break;
         }
+        default: {
+            error("error> Coder: ...");
+        }
         }
         return errorIdx;
     }
@@ -380,15 +383,26 @@ namespace abyss {
                      exp.val = fs.nk;
                      break;
                  }
-                 case SVar: {
+                 case SString: {
+                     string str = Cast::to<string&>(exp);
+                     shared_ptr<string> ptr = make_shared<string>(str);
+                     //fs.lam.k.push_back(Value(ptr));
+                     fs.nk += 1;
+                     exp = SExpr(SInt); //we have to convert to int to indicate constant index
+                     exp.isK = true;
+                     exp.val = fs.nk;
                      break;
                  }
+                 case SVar: {
+                             break;
+                             }
                  default: {
                      error("error> Unknow SExpr type: " +
                            Show::show(exp.getType()));
                  }
                  }
              });
+
         return exp;
     }
 
@@ -410,8 +424,9 @@ namespace abyss {
         auto list = Cast::to<const SExprList&>(tree);
         ensure(list[0]->getType() == SVar &&
                //list[0]->var.getType() == object::TSTRING &&
-               Cast::to<string&>(*list[0]) == "define",
+               Cast::to<VarDesc&>(*list[0]).name == "define",
                "error> generateFunccode should receive function declaration!");
+
 
         /* Ok now this may be valid function declaration */
         auto name_and_params = list[1];
@@ -426,7 +441,7 @@ namespace abyss {
                       fs.np = xs.size() - 1;
                   }
               },
-              [&](string &s) {
+              [&](VarDesc &v) {
                   name = name_and_params;
                   hasParams = false;
                   fs.np = 0;
@@ -441,7 +456,7 @@ namespace abyss {
         Show::println(*lam.source);
         */
 
-        lam.name = Cast::to<string&>(*name);
+        lam.name = Cast::to<VarDesc&>(*name).name;
         //fs.np = hasParams ? name_and_params->list.size() - 1 : 0;
         lam.n_params = fs.np;
         fs.nv = fs.np;
@@ -457,7 +472,7 @@ namespace abyss {
                 it != apply_list.end(); ++it) {
                 if((*it)->getType() == SVar) {
                     fs.sym_table.insert
-                        ({Cast::to<string&>(**it), EnvIndex(RegIndex, i)});
+                        ({Cast::to<VarDesc&>(**it).name, EnvIndex(RegIndex, i)});
                     ++i;
                 }
             }

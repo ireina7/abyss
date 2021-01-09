@@ -15,8 +15,11 @@
  */
 namespace abyss {
 
-    enum SExprType { SBool, SInt, SReal, SVar, SList, SNone };
-    //using VarDesc = variant<Integer, Real, Bool, string>;
+    enum SExprType { SBool, SInt, SReal, SString, SVar, SList, SNone };
+    struct VarDesc {
+        string name;
+        VarDesc(string s = "<unknown>"): name(s) {}
+    };
     struct SExpr;
     using SExprList = vector<shared_ptr<SExpr>>;
     struct SExpr {
@@ -26,6 +29,7 @@ namespace abyss {
             Real,
             Bool,
             string,
+            VarDesc,
             SExprList
             > val;
         /*
@@ -38,10 +42,11 @@ namespace abyss {
             return this->type;
         }
         explicit SExpr(SExprType t = SNone): type(t) {}
-        SExpr(const Bool    &b): type(SBool),  val(b) {}
-        SExpr(const string  &s): type(SVar),  val(s) {}
-        SExpr(const Integer &i): type(SInt),  val(i) {}
-        SExpr(const Real    &r): type(SReal), val(r) {}
+        SExpr(const Bool    &b): type(SBool),   val(b) {}
+        SExpr(const string  &s): type(SString), val(s) {}
+        SExpr(const Integer &i): type(SInt),    val(i) {}
+        SExpr(const Real    &r): type(SReal),   val(r) {}
+        SExpr(const VarDesc &v): type(SVar),    val(v) {}
 
         bool isDefinition() const;
     };
@@ -57,7 +62,7 @@ namespace Cast {
 
     template<>
     inline abyss::string &to(abyss::SExpr &exp) {
-        abyss::ensure(exp.getType() == abyss::SVar);
+        abyss::ensure(exp.getType() == abyss::SString);
         return std::get<abyss::string>(exp.val);
     }
     template<>
@@ -74,6 +79,11 @@ namespace Cast {
     inline abyss::Bool &to(abyss::SExpr &exp) {
         abyss::ensure(exp.getType() == abyss::SBool);
         return std::get<abyss::Bool>(exp.val);
+    }
+    template<>
+    inline abyss::VarDesc &to(abyss::SExpr &exp) {
+        abyss::ensure(exp.getType() == abyss::SVar);
+        return std::get<abyss::VarDesc>(exp.val);
     }
     template<>
     inline abyss::SExprList &to(abyss::SExpr &exp) {
@@ -98,8 +108,13 @@ namespace Cast {
     }
     template<>
     inline const abyss::string &to(const abyss::SExpr &exp) {
-        abyss::ensure(exp.getType() == abyss::SVar);
+        abyss::ensure(exp.getType() == abyss::SString);
         return std::get<abyss::string>(exp.val);
+    }
+    template<>
+    inline const abyss::VarDesc &to(const abyss::SExpr &exp) {
+        abyss::ensure(exp.getType() == abyss::SVar);
+        return std::get<abyss::VarDesc>(exp.val);
     }
     template<>
     inline const abyss::SExprList &to(const abyss::SExpr &exp) {
@@ -146,8 +161,12 @@ namespace Show {
             ans = (exp.isK ? "$" : "") + show(Cast::to<const abyss::Real&>(exp));
             break;
         }
+        case abyss::SString: {
+            ans = (exp.isK ? "$" : "") + show(Cast::to<const abyss::string&>(exp));
+            break;
+        }
         case abyss::SVar: {
-            ans = show(Cast::to<const abyss::string&>(exp));
+            ans = show(Cast::to<const abyss::VarDesc&>(exp).name);
             break;
         }
         case abyss::SList: {

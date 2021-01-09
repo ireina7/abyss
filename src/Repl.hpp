@@ -28,6 +28,11 @@ namespace abyss {
             if(line == ".quit") {
                 break;
             }
+            if(line == ".help") {
+                Show::println("->");
+                Show::println("Help has not been completed yet...\n");
+                continue;
+            }
             string src = line;
             auto exp_and_idx = parseSExpr(src, 0, 0);
             auto exp = exp_and_idx.first;
