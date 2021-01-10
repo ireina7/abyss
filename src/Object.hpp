@@ -184,6 +184,7 @@ namespace abyss {
 
 
 
+
     struct StackValue;
     struct Value {
         object::Tag tag;
@@ -265,6 +266,45 @@ namespace abyss {
 
     const Value Nil = Value(object::Tag(object::TNIL));
     const Value None = Value();
+
+    struct List : public GCObject {
+
+        list<Value> val;
+        List(): GCObject(object::TTABLE), val{} {}
+        List(const list<Value> &xs): GCObject(object::TTABLE), val(xs) {}
+        List(std::initializer_list<Value> vs)
+            : GCObject(object::TTABLE), val(vs) {}
+
+        bool empty() const {
+            return val.empty();
+        }
+        Value &head() {
+            if(empty()) error("error> object: Empty list!");
+            return val.front();
+        }
+        Value head() const {
+            if(empty()) error("error> object: Empty list!");
+            return val.front();
+        }
+        List tail() const {
+            if(empty()) error("error> object: Empty list!");
+            list<Value> ans(++val.begin(), val.end());
+            return List(ans);
+        }
+        static List cons(const Value &x, const List &xs) {
+            List ans = xs;
+            ans.val.push_front(x);
+            return ans;
+        }
+        List &push_front(const Value &x) {
+            val.push_front(x);
+            return *this;
+        }
+        List &push_back(const Value &x) {
+            val.push_back(x);
+            return *this;
+        }
+    };
 
 }
 

@@ -254,6 +254,7 @@ namespace abyss {
         Atom LOAD(Reg a, const bool b);
         Atom LOADK(Reg a, Slot k);
         Atom LOADNIL(Reg a, I32 b);
+        //Atom NEWLIST(Reg a, Reg b, Reg c);
         Atom ADD(Reg a, Reg b, Reg c);
         Atom SUB(Reg a, Reg b, Reg c);
         Atom MUL(Reg a, Reg b, Reg c);
