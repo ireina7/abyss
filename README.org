@@ -12,7 +12,9 @@ The Abyss comes from void, from void you can get everything you want.
 - Syntax of S-Expression
 - Naive REPL
 - Recursions
+- Currying
 - Simple Type system
+- Ad-hoc overloading
 - Callcc and coroutine
 - Typeclasses
 - Monads

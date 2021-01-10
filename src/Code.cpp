@@ -143,21 +143,21 @@ namespace abyss {
             auto key = Cast::to<const VarDesc&>(exp).name;
             if(fs.sym_table.count(key) > 0) {
                 /**
-                   C++ sucks again! //
-                   We have to check count here! //
-                   If we do not carefully check whether key has existed, //
-                   the subscription operator will automatically create one for us //
-                   which is really a bug! //
-                   //
-                   @author: Ireina //
+                   C++ sucks again!
+                   We have to check count here!
+                   If we do not carefully check whether key has existed,
+                   the subscription operator will automatically create one for us
+                   which is really a bug!
+
+                   @author: Ireina
                 */
                 return fs.sym_table[key];
             }
             else {
                 /**
-                   This may come from outer scope, we have to make an upvalue. //
-                   //
-                   @author: Ireina //
+                   This may come from outer scope, we have to make an upvalue.
+
+                   @author: Ireina
                 */
                 Upvaldesc uvdesc;
                 bool found = false;
@@ -318,7 +318,7 @@ namespace abyss {
             }
 
             /**
-               else this is a normal function call //
+               else this is a normal function call
             */
             auto f = list[0];
             Reg ra = fs.top;
